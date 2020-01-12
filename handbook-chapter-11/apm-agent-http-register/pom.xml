@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>apm-handbook</artifactId>
+        <groupId>org.apache.skywalking</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+    <artifactId>apm-agent-http-register</artifactId>
+
+    <properties>
+        <apache-httpclient.version>4.5.3</apache-httpclient.version>
+        <shade.package>org.apache.skywalking.apm.agent.http.register.dependencies</shade.package>
+        <shade.org.apache.http.source>org.apache.http</shade.org.apache.http.source>
+        <shade.org.apache.http.target>${shade.package}.${shade.org.apache.http.source}</shade.org.apache.http.target>
+        <shade.org.apache.commons.source>org.apache.commons</shade.org.apache.commons.source>
+        <shade.org.apache.commons.target>${shade.package}.${shade.org.apache.commons.source}</shade.org.apache.commons.target>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.skywalking</groupId>
+            <artifactId>apm-agent-core</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>${apache-httpclient.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.skywalking</groupId>
+            <artifactId>apm-kafka-trace</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-shade-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <relocations>
+                                <relocation>
+                                    <pattern>${shade.org.apache.http.source}</pattern>
+                                    <shadedPattern>${shade.org.apache.http.target}</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>${shade.org.apache.commons.source}</pattern>
+                                    <shadedPattern>${shade.org.apache.commons.target}</shadedPattern>
+                                </relocation>
+                            </relocations>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

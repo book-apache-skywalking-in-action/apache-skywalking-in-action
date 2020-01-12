@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>apm-handbook</artifactId>
+        <groupId>org.apache.skywalking</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>handbook-chapter-11</artifactId>
+    <packaging>pom</packaging>
+
+    <modules>
+        <module>apm-agent-http-register</module>
+        <module>apm-agent-kafka-upload-trace</module>
+        <module>oap-server-http-register</module>
+        <module>oap-server-kafka-upload-trace</module>
+    </modules>
+    <properties>
+        <os-maven-plugin.version>1.4.1.Final</os-maven-plugin.version>
+        <skywalking.version>6.4.0</skywalking.version>
+    </properties>
+
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.apache.skywalking</groupId>
+                <artifactId>apm-agent-core</artifactId>
+                <version>${skywalking.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+</project>
