@@ -1,23 +1,19 @@
-package org.apache.skywalking.oap.server.kafka.upload.trace.provider;
+package org.apache.skywalking.oap.server.receiver.trace.provider;
 
 import org.apache.skywalking.oap.server.configuration.api.ConfigurationModule;
 import org.apache.skywalking.oap.server.configuration.api.DynamicConfigurationService;
 import org.apache.skywalking.oap.server.core.CoreModule;
 import org.apache.skywalking.oap.server.core.server.GRPCHandlerRegister;
 import org.apache.skywalking.oap.server.core.server.JettyHandlerRegister;
-import org.apache.skywalking.oap.server.kafka.upload.trace.module.KafkaUploadTraceModule;
-import org.apache.skywalking.oap.server.kafka.upload.trace.provider.handler.TraceSegmentReportKafkaServiceHandler;
-import org.apache.skywalking.oap.server.kafka.upload.trace.server.KafkaServer;
-import org.apache.skywalking.oap.server.library.module.*;
-import org.apache.skywalking.oap.server.receiver.sharing.server.SharingServerModule;
+import org.apache.skywalking.oap.server.receiver.trace.module.KafkaUploadTraceModule;
 import org.apache.skywalking.oap.server.receiver.trace.module.TraceModule;
-import org.apache.skywalking.oap.server.receiver.trace.provider.DBLatencyThresholdsAndWatcher;
-import org.apache.skywalking.oap.server.receiver.trace.provider.TraceModuleProvider;
-import org.apache.skywalking.oap.server.receiver.trace.provider.TraceServiceModuleConfig;
-import org.apache.skywalking.oap.server.receiver.trace.provider.UninstrumentedGatewaysConfig;
+import org.apache.skywalking.oap.server.receiver.trace.provider.handler.TraceSegmentReportKafkaServiceHandler;
 import org.apache.skywalking.oap.server.receiver.trace.provider.handler.v5.grpc.TraceSegmentServiceHandler;
 import org.apache.skywalking.oap.server.receiver.trace.provider.handler.v5.rest.TraceSegmentServletHandler;
 import org.apache.skywalking.oap.server.receiver.trace.provider.handler.v6.grpc.TraceSegmentReportServiceHandler;
+import org.apache.skywalking.oap.server.receiver.trace.server.KafkaServer;
+import org.apache.skywalking.oap.server.library.module.*;
+import org.apache.skywalking.oap.server.receiver.sharing.server.SharingServerModule;
 import org.apache.skywalking.oap.server.receiver.trace.provider.parser.*;
 import org.apache.skywalking.oap.server.receiver.trace.provider.parser.listener.endpoint.MultiScopesSpanListener;
 import org.apache.skywalking.oap.server.receiver.trace.provider.parser.listener.segment.SegmentSpanListener;
@@ -26,37 +22,41 @@ import org.apache.skywalking.oap.server.receiver.trace.provider.parser.standardi
 import org.apache.skywalking.oap.server.telemetry.TelemetryModule;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
 
 /**
  * @author caoyixiong
  */
-public class KafkaUploadTraceModuleProvider extends ModuleProvider {
+public class KafkaUploadTraceModuleProvider extends TraceModuleProvider {
+
     private final KafkaUploadTraceServiceModuleConfig moduleConfig;
     private SegmentParse.Producer segmentProducer;
     private SegmentParseV2.Producer segmentProducerV2;
+    private DBLatencyThresholdsAndWatcher thresholds;
+    private UninstrumentedGatewaysConfig uninstrumentedGatewaysConfig;
 
     public KafkaUploadTraceModuleProvider() {
         this.moduleConfig = new KafkaUploadTraceServiceModuleConfig();
     }
 
-    @Override
-    public String name() {
+    @Override public String name() {
         return "default";
     }
 
-    @Override
-    public Class<? extends ModuleDefine> module() {
+    @Override public Class<? extends ModuleDefine> module() {
         return KafkaUploadTraceModule.class;
     }
 
-    @Override
-    public ModuleConfig createConfigBeanIfAbsent() {
+    @Override public ModuleConfig createConfigBeanIfAbsent() {
         return moduleConfig;
     }
 
-    @Override
-    public void prepare() throws ServiceNotProvidedException {
+    @Override public void prepare() throws ServiceNotProvidedException {
+        thresholds = new DBLatencyThresholdsAndWatcher(moduleConfig.getSlowDBAccessThreshold(), this);
+
+        uninstrumentedGatewaysConfig = new UninstrumentedGatewaysConfig(this);
+
+        moduleConfig.setDbLatencyThresholdsAndWatcher(thresholds);
+        moduleConfig.setUninstrumentedGatewaysConfig(uninstrumentedGatewaysConfig);
 
         segmentProducer = new SegmentParse.Producer(getManager(), listenerManager(), moduleConfig);
         segmentProducerV2 = new SegmentParseV2.Producer(getManager(), listenerManager(), moduleConfig);
@@ -75,9 +75,18 @@ public class KafkaUploadTraceModuleProvider extends ModuleProvider {
         return listenerManager;
     }
 
-    @Override
-    public void start() throws ModuleStartException {
+    @Override public void start() throws ModuleStartException {
+        DynamicConfigurationService dynamicConfigurationService = getManager().find(ConfigurationModule.NAME).provider().getService(DynamicConfigurationService.class);
+        GRPCHandlerRegister grpcHandlerRegister = getManager().find(SharingServerModule.NAME).provider().getService(GRPCHandlerRegister.class);
+        JettyHandlerRegister jettyHandlerRegister = getManager().find(SharingServerModule.NAME).provider().getService(JettyHandlerRegister.class);
         try {
+            dynamicConfigurationService.registerConfigChangeWatcher(thresholds);
+            dynamicConfigurationService.registerConfigChangeWatcher(uninstrumentedGatewaysConfig);
+
+            grpcHandlerRegister.addHandler(new TraceSegmentServiceHandler(segmentProducer));
+            grpcHandlerRegister.addHandler(new TraceSegmentReportServiceHandler(segmentProducerV2, getManager()));
+            jettyHandlerRegister.addHandler(new TraceSegmentServletHandler(segmentProducer));
+
             SegmentStandardizationWorker standardizationWorker = new SegmentStandardizationWorker(getManager(), segmentProducer, moduleConfig.getBufferPath() + "v5", moduleConfig.getBufferOffsetMaxFileSize(), moduleConfig.getBufferDataMaxFileSize(), moduleConfig.isBufferFileCleanWhenRestart(), false);
             segmentProducer.setStandardizationWorker(standardizationWorker);
 
@@ -93,13 +102,11 @@ public class KafkaUploadTraceModuleProvider extends ModuleProvider {
         }
     }
 
-    @Override
-    public void notifyAfterCompleted() {
+    @Override public void notifyAfterCompleted() {
 
     }
 
-    @Override
-    public String[] requiredModules() {
-        return new String[]{TelemetryModule.NAME, CoreModule.NAME, SharingServerModule.NAME, ConfigurationModule.NAME};
+    @Override public String[] requiredModules() {
+        return new String[] {TelemetryModule.NAME, CoreModule.NAME, SharingServerModule.NAME, ConfigurationModule.NAME};
     }
 }

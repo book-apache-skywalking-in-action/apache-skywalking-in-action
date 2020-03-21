@@ -1,10 +1,9 @@
-package org.apache.skywalking.oap.server.kafka.upload.trace.server;
+package org.apache.skywalking.oap.server.receiver.trace.server;
 
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.skywalking.oap.server.kafka.upload.trace.provider.handler.KafkaHandler;
-import org.apache.skywalking.oap.server.kafka.upload.trace.provider.handler.TraceSegmentReportKafkaServiceHandler;
+import org.apache.skywalking.oap.server.receiver.trace.provider.handler.KafkaHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

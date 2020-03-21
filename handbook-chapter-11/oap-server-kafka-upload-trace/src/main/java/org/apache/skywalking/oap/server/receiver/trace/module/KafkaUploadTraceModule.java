@@ -1,4 +1,4 @@
-package org.apache.skywalking.oap.server.kafka.upload.trace.module;
+package org.apache.skywalking.oap.server.receiver.trace.module;
 
 import org.apache.skywalking.oap.server.library.module.ModuleDefine;
 import org.apache.skywalking.oap.server.receiver.trace.provider.parser.ISegmentParserService;

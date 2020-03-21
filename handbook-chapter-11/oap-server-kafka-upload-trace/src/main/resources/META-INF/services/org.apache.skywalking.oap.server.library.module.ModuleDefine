@@ -16,4 +16,4 @@
 #
 #
 
-org.apache.skywalking.oap.server.kafka.upload.trace.module.KafkaUploadTraceModule
+org.apache.skywalking.oap.server.receiver.trace.module.KafkaUploadTraceModule

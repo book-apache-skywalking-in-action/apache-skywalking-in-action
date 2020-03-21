@@ -16,7 +16,7 @@
  *
  */
 
-package org.apache.skywalking.oap.server.kafka.upload.trace.provider.handler;
+package org.apache.skywalking.oap.server.receiver.trace.provider.handler;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.kafka.clients.consumer.ConsumerRecord;

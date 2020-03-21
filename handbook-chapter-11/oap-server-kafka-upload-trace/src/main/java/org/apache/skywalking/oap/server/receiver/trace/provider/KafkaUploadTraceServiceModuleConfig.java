@@ -1,6 +1,4 @@
-package org.apache.skywalking.oap.server.kafka.upload.trace.provider;
-
-import org.apache.skywalking.oap.server.receiver.trace.provider.TraceServiceModuleConfig;
+package org.apache.skywalking.oap.server.receiver.trace.provider;
 
 /**
  * @author caoyixiong
